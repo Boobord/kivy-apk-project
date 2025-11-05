@@ -2,8 +2,8 @@ name: Build Kivy APK
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -20,15 +20,21 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install buildozer cython
 
       - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses || true
+        run: |
+          yes | sdkmanager --licenses || true
 
-      - name: Install Android SDK Build-Tools
-        run: sdkmanager "build-tools;36.1.0" || true
+      - name: Install required Android packages
+        run: |
+          yes | sdkmanager --update
+          yes | sdkmanager "platforms;android-31" "build-tools;36.1.0" "platform-tools"
 
       - name: Build APK
-        run: buildozer android debug
+        run: |
+          buildozer android debug
+
 
 
