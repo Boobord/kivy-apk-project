@@ -4,27 +4,32 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ دریافت سورس پروژه
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
+      # 2️⃣ نصب Python و ابزارهای لازم
+      - name: Set up Python and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y unzip git openjdk-17-jdk
+          sudo apt-get install -y unzip git openjdk-17-jdk wget
           pip install --upgrade pip
           pip install buildozer cython
 
+      # 3️⃣ پاکسازی build قبلی (اختیاری ولی پیشنهاد می‌شود)
+      - name: Clean previous build
+        run: |
+          rm -rf $HOME/.buildozer
+          rm -rf $HOME/android-sdk
+
+      # 4️⃣ نصب Android SDK Command Line Tools و تنظیم مسیرها
       - name: Install Android SDK Command Line Tools
         run: |
           mkdir -p $HOME/android-sdk/cmdline-tools
@@ -32,16 +37,17 @@ jobs:
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
           unzip cmdline-tools.zip
           mv cmdline-tools latest
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          echo "export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "export PATH=$PATH" >> $GITHUB_ENV
-          yes | sdkmanager --licenses || true
-          yes | sdkmanager --update
-          yes | sdkmanager "platforms;android-31" "build-tools;33.0.2" "platform-tools"
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
 
+      # 5️⃣ قبول لایسنس‌ها و نصب build-tools و platform-tools
+      - name: Accept Android SDK licenses and install required packages
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager --update
+          sdkmanager "platforms;android-31" "build-tools;33.0.2" "platform-tools"
+
+      # 6️⃣ ساخت APK با Buildozer
       - name: Build APK
         run: |
-          #comment
           buildozer android debug
-
